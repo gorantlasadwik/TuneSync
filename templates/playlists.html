@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Playlists - SyncTunes{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Your Playlists</h2>
+    
+    {% if playlists %}
+        <div class="playlists-grid">
+            {% for playlist in playlists %}
+                <div class="playlist-card">
+                    <h3>{{ playlist.name }}</h3>
+                    <p class="playlist-description">{{ playlist.description or "No description" }}</p>
+                    <div class="playlist-meta">
+                        <span class="platform-badge platform-{{ playlist.platform.lower().replace(' ', '-') }}">
+                            {{ playlist.platform }}
+                        </span>
+                        <span class="track-count">{{ playlist.track_count }} tracks</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>No playlists found</h3>
+            <p>Link your music streaming accounts to see your playlists.</p>
+            <a href="{{ url_for('index') }}" class="btn btn-primary">Link Accounts</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

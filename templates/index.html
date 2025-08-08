@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}SyncTunes - Home{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="hero">
+        <h1>Welcome to SyncTunes</h1>
+        <p>Synchronize your playlists between Spotify and YouTube Music effortlessly.</p>
+    </div>
+
+    <div class="platform-links">
+        <div class="platform-card">
+            <h3>Spotify</h3>
+            <p>Connect your Spotify account to access your playlists.</p>
+            {% if spotify_linked %}
+                <div class="status linked">✓ Connected</div>
+            {% else %}
+                <a href="{{ url_for('link_spotify') }}" class="btn btn-primary">Link Spotify</a>
+            {% endif %}
+        </div>
+
+        <div class="platform-card">
+            <h3>YouTube Music</h3>
+            <p>Enable YouTube Music access to search and match songs.</p>
+            {% if youtube_linked %}
+                <div class="status linked">✓ Connected</div>
+            {% else %}
+                <form method="POST" action="{{ url_for('link_youtube_music') }}">
+                    <button type="submit" class="btn btn-primary">Enable YouTube Music</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if spotify_linked or youtube_linked %}
+        <div class="action-buttons">
+            <a href="{{ url_for('playlists') }}" class="btn btn-secondary">View Playlists</a>
+            {% if spotify_linked and youtube_linked %}
+                <a href="{{ url_for('sync') }}" class="btn btn-primary">Start Syncing</a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <div class="features">
+        <h2>Features</h2>
+        <ul>
+            <li>Connect multiple music streaming accounts</li>
+            <li>View playlists from all connected platforms</li>
+            <li>Sync playlists between Spotify and YouTube Music</li>
+            <li>Track sync history and statistics</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

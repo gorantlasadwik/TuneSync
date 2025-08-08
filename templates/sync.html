@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Sync Playlists - SyncTunes{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Sync Playlists</h2>
+    
+    <div class="sync-form-container">
+        <form id="syncForm" class="sync-form">
+            <div class="form-group">
+                <label for="source_account">Source Platform:</label>
+                <select id="source_account" name="source_account" required>
+                    <option value="">Select source platform</option>
+                    {% for account in accounts %}
+                        {% set platform_name = "Spotify" if account.platform_id == 1 else "YouTube Music" %}
+                        <option value="{{ account.account_id }}">{{ platform_name }} ({{ account.username_on_platform }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="playlist_id">Playlist:</label>
+                <input type="text" id="playlist_id" name="playlist_id" placeholder="Enter Spotify playlist ID" required>
+                <small>For Spotify playlists, copy the playlist ID from the URL</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="destination_account">Destination Platform:</label>
+                <select id="destination_account" name="destination_account" required>
+                    <option value="">Select destination platform</option>
+                    {% for account in accounts %}
+                        {% set platform_name = "Spotify" if account.platform_id == 1 else "YouTube Music" %}
+                        <option value="{{ account.account_id }}">{{ platform_name }} ({{ account.username_on_platform }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Start Sync</button>
+        </form>
+        
+        <div id="syncStatus" class="sync-status" style="display: none;">
+            <h3>Sync Status</h3>
+            <div id="statusMessage"></div>
+            <div id="progressBar" class="progress-bar">
+                <div id="progress" class="progress"></div>
+            </div>
+        </div>
+        
+        <div id="syncResults" class="sync-results" style="display: none;">
+            <h3>Sync Results</h3>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('syncForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const syncData = {
+        source_account_id: formData.get('source_account'),
+        destination_account_id: formData.get('destination_account'),
+        playlist_id: formData.get('playlist_id')
+    };
+    
+    // Show status
+    document.getElementById('syncStatus').style.display = 'block';
+    document.getElementById('syncResults').style.display = 'none';
+    document.getElementById('statusMessage').textContent = 'Starting sync...';
+    document.getElementById('progress').style.width = '10%';
+    
+    try {
+        // Update progress
+        document.getElementById('statusMessage').textContent = 'Fetching playlist tracks...';
+        document.getElementById('progress').style.width = '30%';
+        
+        const response = await fetch('/api/sync', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(syncData)
+        });
+        
+        // Update progress
+        document.getElementById('statusMessage').textContent = 'Processing sync...';
+        document.getElementById('progress').style.width = '70%';
+        
+        const result = await response.json();
+        
+        // Complete progress
+        document.getElementById('progress').style.width = '100%';
+        document.getElementById('statusMessage').textContent = 'Sync completed!';
+        
+        // Show results
+        document.getElementById('syncResults').style.display = 'block';
+        
+        if (result.success) {
+            document.getElementById('resultsContent').innerHTML = `
+                <div class="success">
+                    <p><strong>✓ Sync successful!</strong></p>
+                    <p>${result.message}</p>
+                    <ul>
+                        <li>Songs matched: ${result.songs_added}</li>
+                        <li>Songs not found: ${result.songs_not_found}</li>
+                    </ul>
+                </div>
+            `;
+        } else {
+            document.getElementById('resultsContent').innerHTML = `
+                <div class="error">
+                    <p><strong>✗ Sync failed</strong></p>
+                    <p>${result.error}</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        document.getElementById('statusMessage').textContent = 'Sync failed!';
+        document.getElementById('resultsContent').innerHTML = `
+            <div class="error">
+                <p><strong>✗ Network error</strong></p>
+                <p>${error.message}</p>
+            </div>
+        `;
+        document.getElementById('syncResults').style.display = 'block';
+    }
+});
+</script>
+{% endblock %}
