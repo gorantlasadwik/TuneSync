@@ -114,7 +114,7 @@ def link_spotify():
     logging.info(f"Redirecting to Spotify auth URL: {auth_url}")
     return redirect(auth_url)
 
-@app.route('/api/spotify/callback')
+@app.route('/api/spotify/callback', methods=['GET', 'POST'])
 def spotify_callback():
     """Handle Spotify OAuth callback"""
     logging.info(f"Spotify callback received with args: {request.args}")
