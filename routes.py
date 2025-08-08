@@ -114,6 +114,50 @@ def link_spotify():
     logging.info(f"Redirecting to Spotify auth URL: {auth_url}")
     return redirect(auth_url)
 
+@app.route('/test-oauth')
+def test_oauth():
+    """Manual OAuth testing page"""
+    if 'user_id' not in session:
+        flash('Please login first', 'error')
+        return redirect(url_for('login'))
+    
+    auth_url = get_spotify_auth_url(state=str(session['user_id']))
+    return render_template('test_oauth.html', auth_url=auth_url)
+
+@app.route('/manual-oauth', methods=['POST'])
+def manual_oauth():
+    """Manual OAuth completion for testing"""
+    code = request.form.get('code', '').strip()
+    user_id = request.form.get('user_id')
+    
+    if not code:
+        flash('Please provide the authorization code', 'error')
+        return redirect(url_for('test_oauth'))
+    
+    if not user_id:
+        flash('Invalid user session', 'error')
+        return redirect(url_for('login'))
+    
+    try:
+        # Exchange code for token
+        token_data = exchange_code_for_token(code)
+        if not token_data:
+            flash('Failed to exchange code for token. Make sure the code is copied correctly.', 'error')
+            return redirect(url_for('test_oauth'))
+        
+        # Link account
+        if link_spotify_account(int(user_id), token_data['access_token']):
+            flash('Spotify account linked successfully!', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Failed to link Spotify account', 'error')
+            return redirect(url_for('test_oauth'))
+            
+    except Exception as e:
+        logging.error(f"Manual OAuth error: {e}")
+        flash(f'OAuth error: {str(e)}', 'error')
+        return redirect(url_for('test_oauth'))
+
 @app.route('/api/spotify/callback', methods=['GET', 'POST'])
 def spotify_callback():
     """Handle Spotify OAuth callback"""
