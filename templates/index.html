@@ -16,7 +16,10 @@
             {% if spotify_linked %}
                 <div class="status linked">✓ Connected</div>
             {% else %}
-                <a href="{{ url_for('link_spotify') }}" class="btn btn-primary">Link Spotify</a>
+                <div class="spotify-options">
+                    <a href="{{ url_for('test_oauth') }}" class="btn btn-primary">Manual OAuth Setup</a>
+                    <a href="{{ url_for('link_spotify') }}" class="btn btn-secondary">Try Auto OAuth</a>
+                </div>
             {% endif %}
         </div>
 

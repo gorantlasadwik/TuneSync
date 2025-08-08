@@ -463,3 +463,14 @@ footer {
         padding: 0 1rem;
     }
 }
+
+/* Manual OAuth Styling */
+.spotify-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.spotify-options .btn {
+    text-align: center;
+}
