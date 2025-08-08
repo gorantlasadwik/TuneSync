@@ -15,6 +15,11 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "synctunes-secret-key-2025")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1, x_prefix=1)
 
+# Add debugging route to check external access
+@app.route('/health')
+def health_check():
+    return {'status': 'ok', 'message': 'SyncTunes is running'}
+
 # Add route to handle root domain properly
 @app.before_request
 def force_https():

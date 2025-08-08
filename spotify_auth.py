@@ -9,7 +9,7 @@ from database import db, get_platform_by_name, create_user_platform_account, get
 # Spotify API configuration
 SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID', '6ebe47c28c0c462a9465a17a8c337e4e')
 SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET', '8647e906b0624e16823613a61fe318c8')
-REDIRECT_URI = os.getenv('REDIRECT_URI', 'http://localhost:5000/api/spotify/callback')
+REDIRECT_URI = os.getenv('REDIRECT_URI', 'https://synctunes--1754663549838-start-application.replit.app/api/spotify/callback')
 
 SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize'
 SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token'
