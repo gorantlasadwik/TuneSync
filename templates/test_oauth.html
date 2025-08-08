@@ -36,6 +36,11 @@
             <div class="code-block">{{ auth_url }}</div>
         </details>
         
+        <div class="important-note">
+            <h4>⚠️ Important: OAuth Code Expiry</h4>
+            <p>Spotify authorization codes expire within 10 minutes. If you get an error, get a fresh code by clicking the authorization link again.</p>
+        </div>
+        
         <h3>Complete Authorization:</h3>
         <form method="post" action="{{ url_for('manual_oauth') }}" class="oauth-form">
             <input type="hidden" name="user_id" value="{{ session.user_id }}">
@@ -43,7 +48,7 @@
             <div class="form-group">
                 <label for="code">Authorization Code:</label>
                 <input type="text" name="code" id="code" placeholder="Paste the 'code' parameter from the redirect URL" required>
-                <small>Look for '?code=XXXXXXX' in the URL after authorization</small>
+                <small>Look for '?code=XXXXXXX' in the URL after authorization. Must be used within 10 minutes!</small>
             </div>
             
             <button type="submit" class="btn btn-success">
