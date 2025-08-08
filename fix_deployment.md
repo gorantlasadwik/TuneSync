@@ -1,25 +1,44 @@
-# SyncTunes Deployment Fix
+# How to Fix Spotify OAuth - Step by Step
 
-## Current Issue
-- Flask app runs perfectly on localhost:5000
-- External HTTPS URL returns 404 - routing issue with Replit proxy
-- Spotify OAuth redirect URI already configured in your developer account
+## Method 1: Fix Spotify Dashboard (Recommended)
 
-## Solution: Use Replit Deployment
-The current setup runs in development mode. For external access to work properly, you need to deploy it:
+### Step 1: Access Spotify Developer Dashboard
+1. Go to: **https://developer.spotify.com/dashboard**
+2. Log in with your Spotify account
+3. Find your app with Client ID: **6ebe47c28c0c462a9465a17a8c337e4e**
 
-1. Click the **"Deploy"** button in Replit (top-right)
-2. Choose "Autoscale" deployment
-3. Wait for deployment to complete
-4. Use the deployment URL that will be provided
+### Step 2: Edit App Settings
+1. Click on your app name
+2. Click **"App Settings"** button (top right)
+3. Scroll down to **"Redirect URIs"** section
 
-## Current Configuration
-- App: ✅ Working locally
-- Port mapping: ✅ Configured (5000 → 80)
-- OAuth credentials: ✅ Set up
-- Redirect URI: Already configured for this domain
+### Step 3: Add the Correct Redirect URI
+1. In the "Redirect URIs" box, add this exact URL:
+   ```
+   https://synctunes--1754663549838-start-application.replit.app/api/spotify/callback
+   ```
+2. Click **"Save"** at the bottom
 
-## Expected Result
-After deployment, the URL `https://synctunes--1754663549838-start-application.replit.app/api/spotify/callback` should work properly and the Spotify OAuth will function correctly.
+### Step 4: Test Again
+1. Go back to SyncTunes app
+2. Login with: demo@example.com / demo123
+3. Click "Manual OAuth Setup"
+4. Get fresh authorization code
+5. Use manual OAuth form - should work now!
 
-The application code is complete and ready for deployment.
+---
+
+## Method 2: Alternative Domain Solution (If you can't change Spotify)
+
+If you cannot modify your Spotify app settings, I can:
+1. Create a localhost version that works immediately
+2. Use a different deployment domain
+3. Set up ngrok tunnel for testing
+
+---
+
+## Method 3: Quick Test with Localhost
+
+Want to test immediately? I can set up a localhost version that bypasses all domain issues.
+
+## Which method would you prefer?

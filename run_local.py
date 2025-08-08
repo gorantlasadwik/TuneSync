@@ -1,45 +1,48 @@
 #!/usr/bin/env python3
 """
-SyncTunes Local Development Runner
-Handles the Spotify localhost limitation by providing setup instructions
+Run SyncTunes locally with localhost OAuth configuration
 """
-
 import os
 import sys
-from app import app
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from werkzeug.security import generate_password_hash, check_password_hash
 
-def main():
-    print("=" * 60)
-    print("🎵 SyncTunes - Local Development Server")
-    print("=" * 60)
+# Set localhost configuration
+os.environ['REDIRECT_URI'] = 'http://localhost:5000/api/spotify/callback'
+
+# Import after setting environment
+sys.path.append('.')
+from database import *
+from spotify_auth import *
+from youtube_music import *
+from routes import *
+
+def create_localhost_app():
+    """Create Flask app configured for localhost"""
+    app = Flask(__name__)
+    app.secret_key = os.environ.get('SESSION_SECRET', 'dev-secret-key-for-localhost')
     
-    # Check if redirect URI is set for localhost
-    redirect_uri = os.getenv('REDIRECT_URI', '')
+    # Register all routes
+    from routes import register_routes
+    register_routes(app)
     
-    if 'localhost' in redirect_uri or '127.0.0.1' in redirect_uri:
-        print("⚠️  WARNING: Spotify doesn't allow localhost redirect URIs")
-        print("\n📋 To test Spotify OAuth locally:")
-        print("1. Install ngrok: https://ngrok.com/download")
-        print("2. Run: ngrok http 5000")
-        print("3. Update REDIRECT_URI to your ngrok HTTPS URL")
-        print("4. Add the ngrok URL to your Spotify app settings")
-        print("\n" + "="*60)
+    print("="*60)
+    print("🎵 SyncTunes - Localhost Configuration")
+    print("="*60)
+    print("App running on: http://localhost:5000")
+    print("OAuth redirect: http://localhost:5000/api/spotify/callback")
+    print("")
+    print("Spotify Dashboard Settings Needed:")
+    print("- Add redirect URI: http://localhost:5000/api/spotify/callback")
+    print("- Client ID: 6ebe47c28c0c462a9465a17a8c337e4e")
+    print("")
+    print("Test Account:")
+    print("- Email: demo@example.com")
+    print("- Password: demo123")
+    print("="*60)
     
-    print(f"🚀 Starting SyncTunes on http://localhost:5000")
-    print(f"📍 Current redirect URI: {redirect_uri}")
-    print("🔗 Access at: http://localhost:5000")
-    print("❤️  Health check: http://localhost:5000/health")
-    print("=" * 60)
-    
-    try:
-        # Run the Flask app
-        port = int(os.environ.get('PORT', 5000))
-        app.run(host='0.0.0.0', port=port, debug=True)
-    except KeyboardInterrupt:
-        print("\n👋 SyncTunes stopped. Thanks for using SyncTunes!")
-    except Exception as e:
-        print(f"❌ Error starting SyncTunes: {e}")
-        sys.exit(1)
+    return app
 
 if __name__ == '__main__':
-    main()
+    app = create_localhost_app()
+    app.run(host='localhost', port=5000, debug=True)
