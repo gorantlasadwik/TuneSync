@@ -117,34 +117,43 @@ def link_spotify():
 @app.route('/api/spotify/callback')
 def spotify_callback():
     """Handle Spotify OAuth callback"""
+    logging.info(f"Spotify callback received with args: {request.args}")
+    
     code = request.args.get('code')
     state = request.args.get('state')
     error = request.args.get('error')
     
     if error:
+        logging.error(f"Spotify authorization error: {error}")
         flash(f'Spotify authorization failed: {error}', 'error')
         return redirect(url_for('index'))
     
     if not code or not state:
+        logging.error("Missing code or state in callback")
         flash('Invalid callback parameters', 'error')
         return redirect(url_for('index'))
     
     try:
         user_id = int(state)
+        logging.info(f"Processing callback for user_id: {user_id}")
     except ValueError:
+        logging.error(f"Invalid state parameter: {state}")
         flash('Invalid state parameter', 'error')
         return redirect(url_for('index'))
     
     # Exchange code for token
     token_data = exchange_code_for_token(code)
     if not token_data:
+        logging.error("Failed to exchange code for token")
         flash('Failed to get access token', 'error')
         return redirect(url_for('index'))
     
     # Link account
     if link_spotify_account(user_id, token_data['access_token']):
+        logging.info("Spotify account linked successfully")
         flash('Spotify account linked successfully', 'success')
     else:
+        logging.error("Failed to link Spotify account")
         flash('Failed to link Spotify account', 'error')
     
     return redirect(url_for('index'))

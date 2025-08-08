@@ -2,13 +2,14 @@ import os
 import requests
 import base64
 import urllib.parse
+import logging
 from typing import Optional, Dict, Any, List
 from database import db, get_platform_by_name, create_user_platform_account, get_user_accounts
 
 # Spotify API configuration
 SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID', '6ebe47c28c0c462a9465a17a8c337e4e')
 SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET', '8647e906b0624e16823613a61fe318c8')
-REDIRECT_URI = os.getenv('REDIRECT_URI', 'https://synctunes--1754663549838-start-application.replit.app/api/spotify/callback')
+REDIRECT_URI = os.getenv('REDIRECT_URI', 'http://localhost:5000/api/spotify/callback')
 
 SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize'
 SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token'
@@ -29,7 +30,7 @@ def get_spotify_auth_url(state: str = "") -> str:
     if state:
         params['state'] = state
     
-    print(f"DEBUG: Using redirect URI: {REDIRECT_URI}")
+    logging.info(f"DEBUG: Using redirect URI: {REDIRECT_URI}")
     return f"{SPOTIFY_AUTH_URL}?{urllib.parse.urlencode(params)}"
 
 def exchange_code_for_token(code: str) -> Optional[Dict[str, Any]]:
