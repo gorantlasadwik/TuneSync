@@ -31,13 +31,15 @@ def index():
     # Get user's linked accounts
     accounts = get_user_accounts(session['user_id'])
     
+    spotify_platform = get_platform_by_name('Spotify')
     spotify_linked = any(account for account in accounts 
-                        if get_platform_by_name('Spotify') and 
-                        account['platform_id'] == get_platform_by_name('Spotify')['platform_id'])
+                        if spotify_platform and 
+                        account['platform_id'] == spotify_platform['platform_id'])
     
+    youtube_platform = get_platform_by_name('YouTube Music')
     youtube_linked = any(account for account in accounts 
-                        if get_platform_by_name('YouTube Music') and 
-                        account['platform_id'] == get_platform_by_name('YouTube Music')['platform_id'])
+                        if youtube_platform and 
+                        account['platform_id'] == youtube_platform['platform_id'])
     
     return render_template('index.html', user=user, 
                          spotify_linked=spotify_linked, 
@@ -47,8 +49,8 @@ def index():
 def login():
     """User login"""
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
+        email = request.form.get('email', '')
+        password = request.form.get('password', '')
         
         if not email or not password:
             flash('Email and password are required', 'error')
@@ -68,10 +70,10 @@ def login():
 def register():
     """User registration"""
     if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
+        name = request.form.get('name', '')
+        email = request.form.get('email', '')
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
         
         if not all([name, email, password, confirm_password]):
             flash('All fields are required', 'error')
@@ -172,40 +174,47 @@ def playlists():
     
     for account in accounts:
         platform = None
-        if account['platform_id'] == get_platform_by_name('Spotify')['platform_id']:
+        spotify_platform = get_platform_by_name('Spotify')
+        youtube_platform = get_platform_by_name('YouTube Music')
+        
+        if spotify_platform and account['platform_id'] == spotify_platform['platform_id']:
             platform = 'Spotify'
-        elif account['platform_id'] == get_platform_by_name('YouTube Music')['platform_id']:
+        elif youtube_platform and account['platform_id'] == youtube_platform['platform_id']:
             platform = 'YouTube Music'
         
         if platform == 'Spotify':
             try:
-                spotify_playlists = get_user_playlists(account['auth_token'])
-                for playlist in spotify_playlists:
-                    playlists_data.append({
-                        'id': playlist['id'],
-                        'name': playlist['name'],
-                        'description': playlist.get('description', ''),
-                        'track_count': playlist.get('tracks', {}).get('total', 0),
-                        'platform': 'Spotify',
-                        'account_id': account['account_id']
-                    })
+                spotify_platform = get_platform_by_name('Spotify')
+                if spotify_platform and account['platform_id'] == spotify_platform['platform_id']:
+                    spotify_playlists = get_user_playlists(account['auth_token'])
+                    for playlist in spotify_playlists:
+                        playlists_data.append({
+                            'id': playlist['id'],
+                            'name': playlist['name'],
+                            'description': playlist.get('description', ''),
+                            'track_count': playlist.get('tracks', {}).get('total', 0),
+                            'platform': 'Spotify',
+                            'account_id': account['account_id']
+                        })
             except Exception as e:
                 logging.error(f"Error fetching Spotify playlists: {e}")
         
         elif platform == 'YouTube Music':
             try:
-                ytmusic = setup_ytmusic()
-                if ytmusic:
-                    yt_playlists = get_public_playlists(ytmusic, "Popular Music")
-                    for playlist in yt_playlists[:10]:  # Limit to 10 public playlists
-                        playlists_data.append({
-                            'id': playlist['playlistId'],
-                            'name': playlist['title'],
-                            'description': playlist.get('description', ''),
-                            'track_count': playlist.get('trackCount', 0),
-                            'platform': 'YouTube Music',
-                            'account_id': account['account_id']
-                        })
+                youtube_platform = get_platform_by_name('YouTube Music')
+                if youtube_platform and account['platform_id'] == youtube_platform['platform_id']:
+                    ytmusic = setup_ytmusic()
+                    if ytmusic:
+                        yt_playlists = get_public_playlists(ytmusic, "Popular Music")
+                        for playlist in yt_playlists[:10]:  # Limit to 10 public playlists
+                            playlists_data.append({
+                                'id': playlist['playlistId'],
+                                'name': playlist['title'],
+                                'description': playlist.get('description', ''),
+                                'track_count': playlist.get('trackCount', 0),
+                                'platform': 'YouTube Music',
+                                'account_id': account['account_id']
+                            })
             except Exception as e:
                 logging.error(f"Error fetching YouTube Music playlists: {e}")
     
@@ -255,7 +264,7 @@ def api_sync():
         songs = []
         
         # Get tracks from source platform
-        if source_account['platform_id'] == spotify_platform['platform_id']:
+        if spotify_platform and source_account['platform_id'] == spotify_platform['platform_id']:
             # Get tracks from Spotify
             spotify_tracks = get_playlist_tracks(source_account['auth_token'], playlist_id)
             songs = [{
@@ -272,7 +281,7 @@ def api_sync():
         songs_not_found = 0
         
         # Sync to destination platform
-        if dest_account['platform_id'] == youtube_platform['platform_id']:
+        if youtube_platform and dest_account['platform_id'] == youtube_platform['platform_id']:
             # Sync to YouTube Music (search and match)
             sync_result = sync_to_youtube_music(songs)
             if sync_result['success']:
