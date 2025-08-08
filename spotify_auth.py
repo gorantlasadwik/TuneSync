@@ -44,6 +44,11 @@ def exchange_code_for_token(code: str) -> Optional[Dict[str, Any]]:
         'Content-Type': 'application/x-www-form-urlencoded'
     }
     
+    # Debug logging
+    logging.info(f"Token exchange - Client ID: {SPOTIFY_CLIENT_ID}")
+    logging.info(f"Token exchange - Redirect URI: {REDIRECT_URI}")
+    logging.info(f"Token exchange - Code: {code[:20]}...")
+    
     data = {
         'grant_type': 'authorization_code',
         'code': code,
@@ -51,11 +56,21 @@ def exchange_code_for_token(code: str) -> Optional[Dict[str, Any]]:
     }
     
     try:
+        logging.info(f"Sending token request to: {SPOTIFY_TOKEN_URL}")
+        logging.info(f"Request data: {data}")
         response = requests.post(SPOTIFY_TOKEN_URL, headers=headers, data=data)
+        
+        # Log the response for debugging
+        logging.info(f"Response status: {response.status_code}")
+        if response.status_code != 200:
+            logging.error(f"Response text: {response.text}")
+        
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        print(f"Error exchanging code for token: {e}")
+        logging.error(f"Error exchanging code for token: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            logging.error(f"Error response: {e.response.text}")
         return None
 
 def get_user_profile(access_token: str) -> Optional[Dict[str, Any]]:
