@@ -20,6 +20,11 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1, x_prefix=1)
 def health_check():
     return {'status': 'ok', 'message': 'SyncTunes is running'}
 
+# Test route for external access debugging
+@app.route('/test')
+def test_route():
+    return 'External routing test - this should work if deployment is correct'
+
 # Add route to handle root domain properly
 @app.before_request
 def force_https():
