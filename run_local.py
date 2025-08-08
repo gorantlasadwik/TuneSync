@@ -15,7 +15,7 @@ sys.path.append('.')
 from database import *
 from spotify_auth import *
 from youtube_music import *
-from routes import *
+import routes
 
 def create_localhost_app():
     """Create Flask app configured for localhost"""
