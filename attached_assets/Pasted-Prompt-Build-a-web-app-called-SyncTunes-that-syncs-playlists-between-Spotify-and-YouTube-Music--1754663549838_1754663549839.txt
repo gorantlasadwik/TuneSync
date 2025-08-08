@@ -1,0 +1,126 @@
+Prompt:
+
+Build a web app called SyncTunes that syncs playlists between Spotify and YouTube Music.
+
+Technology stack:
+
+Backend: Python 3, Flask
+
+Database: SQLite (but based on my provided SQL Plus schema)
+
+Frontend: Minimal black & white HTML + CSS (no fancy JS, just fetch API calls)
+
+Features:
+
+Database — Create tables based on the following SQL Plus schema, adapted to SQLite syntax:
+
+sql
+Copy
+Edit
+CREATE TABLE User_ (
+    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    email TEXT UNIQUE,
+    password TEXT
+);
+CREATE TABLE Admin (
+    admin_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    email TEXT UNIQUE,
+    password TEXT
+);
+CREATE TABLE Platform (
+    platform_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform_name TEXT,
+    api_details TEXT
+);
+CREATE TABLE UserPlatformAccount (
+    account_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    platform_id INTEGER,
+    username_on_platform TEXT,
+    auth_token TEXT,
+    FOREIGN KEY (user_id) REFERENCES User_(user_id),
+    FOREIGN KEY (platform_id) REFERENCES Platform(platform_id)
+);
+CREATE TABLE Playlist (
+    playlist_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER,
+    name TEXT,
+    description TEXT,
+    last_updated TEXT,
+    FOREIGN KEY (account_id) REFERENCES UserPlatformAccount(account_id)
+);
+CREATE TABLE Song (
+    song_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    artist TEXT,
+    album TEXT,
+    duration INTEGER
+);
+CREATE TABLE PlatformSong (
+    platform_song_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    song_id INTEGER,
+    platform_id INTEGER,
+    platform_specific_id TEXT,
+    FOREIGN KEY (song_id) REFERENCES Song(song_id),
+    FOREIGN KEY (platform_id) REFERENCES Platform(platform_id)
+);
+CREATE TABLE PlaylistSong (
+    playlist_id INTEGER,
+    song_id INTEGER,
+    added_at TEXT,
+    PRIMARY KEY (playlist_id, song_id),
+    FOREIGN KEY (playlist_id) REFERENCES Playlist(playlist_id),
+    FOREIGN KEY (song_id) REFERENCES Song(song_id)
+);
+CREATE TABLE SyncLog (
+    sync_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    source_account_id INTEGER,
+    destination_account_id INTEGER,
+    playlist_id INTEGER,
+    total_songs_synced INTEGER,
+    songs_added INTEGER,
+    songs_removed INTEGER,
+    timestamp TEXT,
+    FOREIGN KEY (user_id) REFERENCES User_(user_id),
+    FOREIGN KEY (source_account_id) REFERENCES UserPlatformAccount(account_id),
+    FOREIGN KEY (destination_account_id) REFERENCES UserPlatformAccount(account_id),
+    FOREIGN KEY (playlist_id) REFERENCES Playlist(playlist_id)
+);
+Spotify API — Implement OAuth 2.0 authentication using my keys:
+
+ini
+Copy
+Edit
+SPOTIFY_CLIENT_ID=6ebe47c28c0c462a9465a17a8c337e4e
+SPOTIFY_CLIENT_SECRET=8647e906b0624e16823613a61fe318c8
+REDIRECT_URI=http://localhost:5000/api/spotify/callback
+Store tokens in UserPlatformAccount.
+
+YouTube Music API — Use the ytmusicapi Python library. Support fetching public playlists and searching for songs to add to another platform.
+
+Sync Logic — Implement /api/sync to:
+
+Get playlist tracks from Spotify
+
+Search & add them to YouTube Music playlist
+
+Save sync logs to SyncLog
+
+Frontend — Simple black/white HTML pages:
+
+index.html: Welcome page, buttons to "Link Spotify", "Link YouTube Music"
+
+playlists.html: List all playlists from linked accounts
+
+sync.html: Form to select source & destination and sync
+
+Run instructions — Include requirements.txt and README.md so that on Replit, user can:
+
+Set environment variables in .env
+
+Click Run and have Flask server start
+
+Output complete working code in a single downloadable project folder.
