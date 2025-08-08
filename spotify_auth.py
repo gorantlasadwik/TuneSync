@@ -29,6 +29,7 @@ def get_spotify_auth_url(state: str = "") -> str:
     if state:
         params['state'] = state
     
+    print(f"DEBUG: Using redirect URI: {REDIRECT_URI}")
     return f"{SPOTIFY_AUTH_URL}?{urllib.parse.urlencode(params)}"
 
 def exchange_code_for_token(code: str) -> Optional[Dict[str, Any]]:

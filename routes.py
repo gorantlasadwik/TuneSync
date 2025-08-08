@@ -111,6 +111,7 @@ def link_spotify():
         return redirect(url_for('login'))
     
     auth_url = get_spotify_auth_url(state=str(session['user_id']))
+    logging.info(f"Redirecting to Spotify auth URL: {auth_url}")
     return redirect(auth_url)
 
 @app.route('/api/spotify/callback')
