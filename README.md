@@ -104,7 +104,6 @@ The application implements a complete SQL schema in server memory:
 
 ## Security Features
 
-- Password hashing using Werkzeug security
 - Session management with secure secret keys
 - OAuth 2.0 integration for external platform access
 - Input validation and error handling
