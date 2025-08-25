@@ -29,8 +29,8 @@ A web application for synchronizing playlists between Spotify and YouTube Music.
 
 3. Set up environment variables in `.env` file:
    ```
-   SPOTIFY_CLIENT_ID=6ebe47c28c0c462a9465a17a8c337e4e
-   SPOTIFY_CLIENT_SECRET=8647e906b0624e16823613a61fe318c8
+   SPOTIFY_CLIENT_ID= Get it from Spotify for Developers
+   SPOTIFY_CLIENT_SECRET= Get it from Spotify for Developers
    REDIRECT_URI=http://localhost:5000/api/spotify/callback
    SESSION_SECRET=synctunes-secret-key-2025-production
    ```
