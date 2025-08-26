@@ -17,6 +17,42 @@ from youtube_music import (
     sync_to_youtube_music
 )
 
+def _get_spotify_playlists(account):
+    """Helper to get Spotify playlists."""
+    try:
+        spotify_playlists = get_user_playlists(account['auth_token'])
+        return [{
+            'id': p['id'],
+            'name': p['name'],
+            'description': p.get('description', ''),
+            'track_count': p.get('tracks', {}).get('total', 0),
+            'platform': 'Spotify',
+            'account_id': account['userplatformaccount_id']
+        } for p in spotify_playlists]
+    except Exception as e:
+        logging.error(f"Error fetching Spotify playlists for account {account['userplatformaccount_id']}: {e}")
+        return []
+
+def _get_youtube_music_playlists(account):
+    """Helper to get YouTube Music playlists."""
+    try:
+        ytmusic = setup_ytmusic()
+        if ytmusic:
+            # Note: ytmusicapi doesn't support getting a user's library playlists without authentication
+            # This is fetching public playlists as a demonstration
+            yt_playlists = get_public_playlists(ytmusic, "Popular Music")
+            return [{
+                'id': p['playlistId'],
+                'name': p['title'],
+                'description': p.get('description', ''),
+                'track_count': p.get('trackCount', 0),
+                'platform': 'YouTube Music',
+                'account_id': account['userplatformaccount_id']
+            } for p in yt_playlists[:10]]
+    except Exception as e:
+        logging.error(f"Error fetching YouTube Music playlists for account {account['userplatformaccount_id']}: {e}")
+    return []
+
 @app.route('/')
 def index():
     """Home page"""
@@ -30,16 +66,13 @@ def index():
     
     # Get user's linked accounts
     accounts = get_user_accounts(session['user_id'])
-    
+    linked_platform_ids = {acc['platform_id'] for acc in accounts}
+
     spotify_platform = get_platform_by_name('Spotify')
-    spotify_linked = any(account for account in accounts 
-                        if spotify_platform and 
-                        account['platform_id'] == spotify_platform['platform_id'])
-    
     youtube_platform = get_platform_by_name('YouTube Music')
-    youtube_linked = any(account for account in accounts 
-                        if youtube_platform and 
-                        account['platform_id'] == youtube_platform['platform_id'])
+
+    spotify_linked = spotify_platform and spotify_platform['platform_id'] in linked_platform_ids
+    youtube_linked = youtube_platform and youtube_platform['platform_id'] in linked_platform_ids
     
     return render_template('index.html', user=user, 
                          spotify_linked=spotify_linked, 
@@ -220,58 +253,20 @@ def playlists():
     """Show user playlists"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     user = get_user_by_id(session['user_id'])
     accounts = get_user_accounts(session['user_id'])
     
+    spotify_platform = get_platform_by_name('Spotify')
+    youtube_platform = get_platform_by_name('YouTube Music')
+
     playlists_data = []
-    
     for account in accounts:
-        platform = None
-        spotify_platform = get_platform_by_name('Spotify')
-        youtube_platform = get_platform_by_name('YouTube Music')
-        
         if spotify_platform and account['platform_id'] == spotify_platform['platform_id']:
-            platform = 'Spotify'
+            playlists_data.extend(_get_spotify_playlists(account))
         elif youtube_platform and account['platform_id'] == youtube_platform['platform_id']:
-            platform = 'YouTube Music'
-        
-        if platform == 'Spotify':
-            try:
-                spotify_platform = get_platform_by_name('Spotify')
-                if spotify_platform and account['platform_id'] == spotify_platform['platform_id']:
-                    spotify_playlists = get_user_playlists(account['auth_token'])
-                    for playlist in spotify_playlists:
-                        playlists_data.append({
-                            'id': playlist['id'],
-                            'name': playlist['name'],
-                            'description': playlist.get('description', ''),
-                            'track_count': playlist.get('tracks', {}).get('total', 0),
-                            'platform': 'Spotify',
-                            'account_id': account['account_id']
-                        })
-            except Exception as e:
-                logging.error(f"Error fetching Spotify playlists: {e}")
-        
-        elif platform == 'YouTube Music':
-            try:
-                youtube_platform = get_platform_by_name('YouTube Music')
-                if youtube_platform and account['platform_id'] == youtube_platform['platform_id']:
-                    ytmusic = setup_ytmusic()
-                    if ytmusic:
-                        yt_playlists = get_public_playlists(ytmusic, "Popular Music")
-                        for playlist in yt_playlists[:10]:  # Limit to 10 public playlists
-                            playlists_data.append({
-                                'id': playlist['playlistId'],
-                                'name': playlist['title'],
-                                'description': playlist.get('description', ''),
-                                'track_count': playlist.get('trackCount', 0),
-                                'platform': 'YouTube Music',
-                                'account_id': account['account_id']
-                            })
-            except Exception as e:
-                logging.error(f"Error fetching YouTube Music playlists: {e}")
-    
+            playlists_data.extend(_get_youtube_music_playlists(account))
+
     return render_template('playlists.html', user=user, playlists=playlists_data)
 
 @app.route('/sync')
@@ -285,6 +280,51 @@ def sync():
     
     return render_template('sync.html', user=user, accounts=accounts)
 
+def _get_songs_from_spotify_playlist(auth_token, playlist_id):
+    """Fetches songs from a Spotify playlist."""
+    try:
+        spotify_tracks = get_playlist_tracks(auth_token, playlist_id)
+        if spotify_tracks is None:
+            return None
+        return [{
+            'name': track['name'],
+            'artists': track['artists'],
+            'album': track['album'],
+            'duration_ms': track['duration_ms']
+        } for track in spotify_tracks]
+    except Exception as e:
+        logging.error(f"Error fetching Spotify playlist tracks: {e}")
+        return None
+
+def _sync_to_youtube_and_log(songs, youtube_platform_id):
+    """Syncs songs to YouTube Music and logs them in the database."""
+    sync_result = sync_to_youtube_music(songs)
+    if not sync_result['success']:
+        return {'success': False, 'error': sync_result.get('error', 'Sync failed')}
+
+    for found_song_data in sync_result['found_songs']:
+        original_song = found_song_data['original']
+        youtube_song = found_song_data['youtube_music']
+
+        song_id = get_or_create_song(
+            title=original_song['name'],
+            artist=', '.join(original_song['artists']),
+            album=original_song['album'],
+            duration=original_song.get('duration_ms', 0) // 1000
+        )
+
+        add_platform_song(
+            song_id=song_id,
+            platform_id=youtube_platform_id,
+            platform_specific_id=youtube_song['videoId']
+        )
+
+    return {
+        'success': True,
+        'songs_added': sync_result['total_found'],
+        'songs_not_found': sync_result['total_not_found']
+    }
+
 @app.route('/api/sync', methods=['POST'])
 def api_sync():
     """Sync playlists between platforms"""
@@ -297,91 +337,59 @@ def api_sync():
     
     source_account_id = data.get('source_account_id')
     destination_account_id = data.get('destination_account_id')
-    playlist_id = data.get('playlist_id')
+    playlist_id_str = data.get('playlist_id') # This is spotify's playlist id
     
-    if not all([source_account_id, destination_account_id, playlist_id]):
+    if not all([source_account_id, destination_account_id, playlist_id_str]):
         return jsonify({'success': False, 'error': 'Missing required parameters'}), 400
     
     try:
-        # Get accounts
-        accounts = get_user_accounts(session['user_id'])
-        source_account = next((acc for acc in accounts if acc['account_id'] == int(source_account_id)), None)
-        dest_account = next((acc for acc in accounts if acc['account_id'] == int(destination_account_id)), None)
+        user_id = session['user_id']
+        accounts = get_user_accounts(user_id)
+
+        source_account = next((acc for acc in accounts if acc['userplatformaccount_id'] == int(source_account_id)), None)
+        dest_account = next((acc for acc in accounts if acc['userplatformaccount_id'] == int(destination_account_id)), None)
         
         if not source_account or not dest_account:
             return jsonify({'success': False, 'error': 'Invalid account IDs'}), 400
-        
-        # Get platform information
+
         spotify_platform = get_platform_by_name('Spotify')
         youtube_platform = get_platform_by_name('YouTube Music')
         
         songs = []
-        
-        # Get tracks from source platform
         if spotify_platform and source_account['platform_id'] == spotify_platform['platform_id']:
-            # Get tracks from Spotify
-            spotify_tracks = get_playlist_tracks(source_account['auth_token'], playlist_id)
-            songs = [{
-                'name': track['name'],
-                'artists': track['artists'],
-                'album': track['album'],
-                'duration_ms': track['duration_ms']
-            } for track in spotify_tracks]
-        
+            songs = _get_songs_from_spotify_playlist(source_account['auth_token'], playlist_id_str)
+
+        if songs is None:
+            return jsonify({'success': False, 'error': 'Failed to fetch songs from source playlist'}), 500
         if not songs:
             return jsonify({'success': False, 'error': 'No songs found in source playlist'}), 400
-        
-        songs_added = 0
-        songs_not_found = 0
-        
-        # Sync to destination platform
+
+        result = {'success': False, 'error': 'Destination platform not supported'}
         if youtube_platform and dest_account['platform_id'] == youtube_platform['platform_id']:
-            # Sync to YouTube Music (search and match)
-            sync_result = sync_to_youtube_music(songs)
-            if sync_result['success']:
-                songs_added = sync_result['total_found']
-                songs_not_found = sync_result['total_not_found']
-                
-                # Store songs in database
-                for found_song_data in sync_result['found_songs']:
-                    original_song = found_song_data['original']
-                    youtube_song = found_song_data['youtube_music']
-                    
-                    # Create/get song record
-                    song_id = get_or_create_song(
-                        title=original_song['name'],
-                        artist=', '.join(original_song['artists']),
-                        album=original_song['album'],
-                        duration=original_song.get('duration_ms', 0) // 1000
-                    )
-                    
-                    # Add platform song mapping for YouTube Music
-                    add_platform_song(
-                        song_id=song_id,
-                        platform_id=youtube_platform['platform_id'],
-                        platform_specific_id=youtube_song['videoId']
-                    )
-            else:
-                return jsonify({'success': False, 'error': sync_result.get('error', 'Sync failed')}), 500
-        
-        # Create sync log
+            result = _sync_to_youtube_and_log(songs, youtube_platform['platform_id'])
+
+        if not result['success']:
+            return jsonify(result), 500
+
+        # For now, we will not create a playlist in our DB, so playlist_id is 0.
+        # This is a limitation of the current design.
         create_sync_log(
-            user_id=session['user_id'],
-            source_account_id=source_account_id,
-            destination_account_id=destination_account_id,
-            playlist_id=0,  # We don't create actual playlists on YouTube Music
+            user_id=user_id,
+            source_account_id=int(source_account_id),
+            destination_account_id=int(destination_account_id),
+            playlist_id=0, # Hardcoded, as we don't store a local copy of the playlist
             total_songs=len(songs),
-            songs_added=songs_added,
+            songs_added=result['songs_added'],
             songs_removed=0
         )
         
         return jsonify({
             'success': True,
-            'message': f'Sync completed: {songs_added} songs matched, {songs_not_found} not found',
-            'songs_added': songs_added,
-            'songs_not_found': songs_not_found
+            'message': f"Sync completed: {result['songs_added']} songs matched, {result['songs_not_found']} not found",
+            'songs_added': result['songs_added'],
+            'songs_not_found': result['songs_not_found']
         })
-        
+
     except Exception as e:
         logging.error(f"Sync error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
